@@ -16,19 +16,16 @@
 
 package org.gradle.smoketests
 
-import org.gradle.integtests.fixtures.ToBeFixedForConfigurationCache
+
 import org.gradle.integtests.fixtures.UnsupportedWithConfigurationCache
 import org.gradle.profiler.DefaultScenarioContext
 import org.gradle.profiler.Phase
 import org.gradle.profiler.mutations.ApplyNonAbiChangeToJavaSourceFileMutator
 import org.gradle.util.GradleVersion
-import org.gradle.util.Requires
-import org.gradle.util.TestPrecondition
 import spock.lang.Unroll
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-@Requires(TestPrecondition.JDK11_OR_EARLIER)
 class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest {
 
     // TODO:configuration-cache remove once fixed upstream
@@ -42,6 +39,9 @@ class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest 
     def "check deprecation warnings produced by building Santa Tracker Java (agp=#agpVersion)"() {
 
         given:
+        AGP_VERSIONS.assumeCurrentJavaVersionIsSupportedBy(agpVersion)
+
+        and:
         def checkoutDir = temporaryFolder.createDir("checkout")
         setupCopyOfSantaTracker(checkoutDir, 'Java', agpVersion)
 
@@ -49,12 +49,27 @@ class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest 
         def result = buildLocation(checkoutDir, agpVersion)
 
         then:
-        if (agpVersion.startsWith('3.6')) {
-            expectDeprecationWarnings(result,
-                "Internal API constructor DefaultDomainObjectSet(Class<T>) has been deprecated. This is scheduled to be removed in Gradle 7.0. " +
-                    "Please use ObjectFactory.domainObjectSet(Class<T>) instead. " +
-                    "See https://docs.gradle.org/${GradleVersion.current().version}/userguide/custom_gradle_types.html#domainobjectset for more details."
+        if (agpVersion.startsWith("3.6")) {
+            expectDeprecationWarnings(
+                    result,
+                    "Internal API constructor DefaultDomainObjectSet(Class<T>) has been deprecated. " +
+                            "This is scheduled to be removed in Gradle 7.0. Please use ObjectFactory.domainObjectSet(Class<T>) instead. " +
+                            "See https://docs.gradle.org/${GradleVersion.current().version}/userguide/custom_gradle_types.html#domainobjectset for more details.",
+                    "The WorkerExecutor.submit() method has been deprecated. " +
+                            "This is scheduled to be removed in Gradle 8.0. Please use the noIsolation(), classLoaderIsolation() or processIsolation() method instead. " +
+                            "See https://docs.gradle.org/${GradleVersion.current().version}/userguide/upgrading_version_5.html#method_workerexecutor_submit_is_deprecated for more details."
             )
+        } else if (agpVersion.startsWith('4.0.2')) {
+            expectDeprecationWarnings(
+                    result,
+                    "The WorkerExecutor.submit() method has been deprecated. " +
+                            "This is scheduled to be removed in Gradle 8.0. Please use the noIsolation(), classLoaderIsolation() or processIsolation() method instead. " +
+                            "See https://docs.gradle.org/${GradleVersion.current().version}/userguide/upgrading_version_5.html#method_workerexecutor_submit_is_deprecated for more details."
+            )
+        } else if (agpVersion.startsWith('4.1')) {
+            expectDeprecationWarnings(result, "The WorkerExecutor.submit() method has been deprecated. " +
+                    "This is scheduled to be removed in Gradle 8.0. Please use the noIsolation(), classLoaderIsolation() or processIsolation() method instead. " +
+                    "See https://docs.gradle.org/${GradleVersion.current().version}/userguide/upgrading_version_5.html#method_workerexecutor_submit_is_deprecated for more details.")
         } else {
             expectNoDeprecationWarnings(result)
         }
@@ -69,6 +84,9 @@ class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest 
     def "incremental Java compilation works for Santa Tracker Java (agp=#agpVersion)"() {
 
         given:
+        AGP_VERSIONS.assumeCurrentJavaVersionIsSupportedBy(agpVersion)
+
+        and:
         def checkoutDir = temporaryFolder.createDir("checkout")
         setupCopyOfSantaTracker(checkoutDir, 'Java', agpVersion)
         def buildContext = new DefaultScenarioContext(UUID.randomUUID(), "nonAbiChange").withBuild(Phase.MEASURE, 0)
@@ -102,11 +120,13 @@ class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest 
     }
 
     @Unroll
-    @UnsupportedWithConfigurationCache(iterationMatchers = [AGP_3_ITERATION_MATCHER, AGP_4_0_ITERATION_MATCHER, AGP_4_1_ITERATION_MATCHER])
-    @ToBeFixedForConfigurationCache(iterationMatchers = AGP_4_2_ITERATION_MATCHER)
+    @UnsupportedWithConfigurationCache(iterationMatchers = AGP_4_2_ITERATION_MATCHER)
     def "can lint Santa-Tracker #flavour (agp=#agpVersion)"() {
 
         given:
+        AGP_VERSIONS.assumeCurrentJavaVersionIsSupportedBy(agpVersion)
+
+        and:
         def checkoutDir = temporaryFolder.createDir("checkout")
         setupCopyOfSantaTracker(checkoutDir, flavour, agpVersion)
 
@@ -126,6 +146,6 @@ class AndroidSantaTrackerSmokeTest extends AbstractAndroidSantaTrackerSmokeTest 
         result.output.contains("Lint found errors in the project; aborting build.")
 
         where:
-        [agpVersion, flavour] << [TESTED_AGP_VERSIONS, ['Java', 'Kotlin']].combinations()
+        [agpVersion, flavour] << [AGP_VERSIONS.getLatestsFromMinorPlusNightly("4.2"), ['Java', 'Kotlin']].combinations()
     }
 }
