@@ -78,17 +78,18 @@ class FileCollectionCodec(
             val contents = read()
             val collection = if (contents is Collection<*>) {
                 fileCollectionFactory.resolving(
-                    contents.map { element ->
-                        when (element) {
-                            is File -> element
-                            is SubtractingFileCollectionSpec -> element.left.minus(element.right)
-                            is FilteredFileCollectionSpec -> element.collection.filter(element.filter)
-                            is ProviderBackedFileCollectionSpec -> element.provider
-                            is FileTree -> element
-                            is ResolvedArtifactSet -> artifactSetConverter.asFileCollection(element)
-                            else -> throw IllegalArgumentException("Unexpected item $element in file collection contents")
-                        }
-                    }
+                        contents.map { element ->
+                            when (element) {
+                                is File -> element
+                                is SubtractingFileCollectionSpec -> element.left.minus(element.right)
+                                is FilteredFileCollectionSpec -> element.collection.filter(element.filter)
+                                is ProviderBackedFileCollectionSpec -> element.provider
+                                is FileTree -> element
+                                is ResolvedArtifactSet -> artifactSetConverter.asFileCollection(element)
+                                else -> throw IllegalArgumentException("Unexpected item $element in file collection contents")
+                            }
+                        },
+                        false
                 )
             } else {
                 fileCollectionFactory.create(ErrorFileSet(contents as BrokenValue))

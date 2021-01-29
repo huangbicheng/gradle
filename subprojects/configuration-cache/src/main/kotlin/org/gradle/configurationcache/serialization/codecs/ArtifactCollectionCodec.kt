@@ -61,13 +61,14 @@ class ArtifactCollectionCodec(
 
         @Suppress("implicit_cast_to_any")
         val files = fileCollectionFactory.resolving(
-            elements.map { element ->
-                when (element) {
-                    is FixedFileArtifactSpec -> element.file
-                    is ResolvedArtifactSet -> artifactSetConverter.asFileCollection(element)
-                    else -> throw IllegalArgumentException("Unexpected element $element in artifact collection")
-                }
-            }
+                elements.map { element ->
+                    when (element) {
+                        is FixedFileArtifactSpec -> element.file
+                        is ResolvedArtifactSet -> artifactSetConverter.asFileCollection(element)
+                        else -> throw IllegalArgumentException("Unexpected element $element in artifact collection")
+                    }
+                },
+                false
         )
         val failures = readList().uncheckedCast<List<Throwable>>()
         return FixedArtifactCollection(files, elements, failures, artifactSetConverter)
